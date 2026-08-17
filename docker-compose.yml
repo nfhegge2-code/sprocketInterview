@@ -1,0 +1,48 @@
+services:
+  honeypot:
+    build: ./honeypot
+    container_name: honeypot-listener
+    restart: unless-stopped
+    # Host port 22 (real SSH port) -> container's unprivileged listen port.
+    # This means the honeypot needs NO elevated privileges in the container.
+    # IMPORTANT: move your real sshd to a different port (see README) before
+    # binding this to 22, or you'll lock yourself out / conflict with sshd.
+    ports:
+      - "22:2222"
+    environment:
+      HONEYPOT_PORT: "2222"
+      DB_PATH: "/data/honeypot.db"
+    volumes:
+      - honeypot-data:/data
+    networks:
+      - honeypot-net
+    # No inbound access needed to anything except the internet (for GeoIP
+    # lookups against ip-api.com). No outbound access to the api container
+    # or any internal service -- deliberately one-way.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    build: ./api
+    container_name: honeypot-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_PATH: "/data/honeypot.db"
+    volumes:
+      - honeypot-data:/data:ro   # read-only: the API can never write to the log
+    networks:
+      - honeypot-net
+    depends_on:
+      - honeypot
+
+networks:
+  honeypot-net:
+    driver: bridge
+
+volumes:
+  honeypot-data:

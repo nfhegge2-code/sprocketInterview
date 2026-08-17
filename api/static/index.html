@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Honeypot Attack Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>SSH Honeypot &mdash; Live Attack Map</h1>
+      <div id="stats-bar">
+        <span class="stat"><strong id="stat-total">0</strong> total attempts</span>
+        <span class="stat"><strong id="stat-hour">0</strong> in last hour</span>
+        <span class="stat" id="status">connecting&hellip;</span>
+      </div>
+    </header>
+
+    <div id="main">
+      <div id="map"></div>
+      <aside id="sidebar">
+        <section>
+          <h2>Live feed</h2>
+          <ul id="feed"></ul>
+        </section>
+        <section>
+          <h2>Top countries</h2>
+          <ul id="top-countries"></ul>
+        </section>
+        <section>
+          <h2>Top source IPs</h2>
+          <ul id="top-ips"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
