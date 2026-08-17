@@ -27,7 +27,7 @@ app.add_middleware(
 
 
 def query_db(sql: str, params: tuple = ()) -> list[dict]:
-    with closing(sqlite3.connect(DB_PATH)) as conn:
+    with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
