@@ -10,7 +10,7 @@ COPY listener.py .
 # Runs as non-root. Binding to the unprivileged HONEYPOT_PORT (default 2222)
 # means we don't need root/CAP_NET_BIND_SERVICE inside the container -- the
 # host maps the real port 22 -> this container's 2222 (see docker-compose.yml).
-RUN useradd -m honeypot
+RUN useradd -m honeypot && mkdir -p /data && chown -R honeypot:honeypot /data
 USER honeypot
 
 CMD ["python", "listener.py"]
