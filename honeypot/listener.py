@@ -43,7 +43,7 @@ log = logging.getLogger("honeypot")
 def init_db() -> None:
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with closing(sqlite3.connect(DB_PATH)) as conn:
-        conn.execute("PRAGMA journal_mode=WAL;")
+        #conn.execute("PRAGMA journal_mode=WAL;") - dosen't need shared memory coordination
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS attacks (
