@@ -84,9 +84,52 @@ the assessment scope reasonable -- see limitations below.)
 - **GeoIP lookups are cached and skip private IP ranges** (10.x, 172.16.x,
   192.168.x, 127.x) so local/health-check traffic doesn't burn API calls or
   clutter the map with garbage data.
-- **SQLite in WAL mode** was chosen over Postgres/Redis to keep the stack to
-  two containers for a 3-4 hour scope. It's a real limitation at scale (see
-  below) but is fine for what a single honeypot on one VPS actually sees.
+- **SQLite with the default rollback journal** was chosen over Postgres/Redis
+  to keep the stack to two containers for a 3-4 hour scope. WAL mode was
+  tried first for better write concurrency, but WAL requires a shared-memory
+  index file that SQLite tries to create even for read-only connections --
+  which fails against the API container's genuinely read-only volume mount.
+  The default journal mode has no such requirement and the honeypot's write
+  volume doesn't need WAL's concurrency benefits anyway.
+
+## Debugging notes from the actual deployment
+
+Two real bugs came up going from "builds locally" to "running on a public
+VPS" -- worth knowing going into the interview, since they're better
+examples of actual troubleshooting than a clean happy-path build would be.
+
+**1. Honeypot container crash-looping on startup.**
+The honeypot runs as a non-root user inside its container (a deliberate
+choice, see above). Docker creates named volumes owned by `root` by default
+when nothing in the image pre-creates that path, so the non-root process
+couldn't write its SQLite file into `/data` and crashed immediately on
+every restart. Fixed by creating `/data` and `chown`-ing it to the
+`honeypot` user *inside the Dockerfile*, before the `USER honeypot`
+directive -- when Docker later mounts an empty named volume over that path,
+it inherits the ownership that already existed there at build time.
+
+**2. API returning 500s even after the first fix.**
+The API container's volume is intentionally mounted `:ro` (read-only) --
+the API should never be able to write to the honeypot's log. Two layers of
+this bit us:
+
+- `sqlite3.connect()` requests read-write access by default even for a
+  plain `SELECT`, which fails outright against a read-only mount. Fixed by
+  connecting via a `file:...?mode=ro` URI instead, which tells SQLite not
+  to attempt that.
+- That alone wasn't enough, because the honeypot was writing in **WAL
+  journal mode**, which needs a shared-memory index file (`-shm`) for
+  coordination that SQLite tries to create even for read-only connections.
+  A truly read-only mount blocks that too. Since a honeypot's write volume
+  is nowhere near what WAL's concurrency benefits are for, the real fix was
+  dropping WAL entirely and using SQLite's default rollback journal, which
+  has no such requirement.
+
+Both are the kind of interaction that's easy to miss when building and
+testing everything on one machine as one user, and only surfaces once
+you've got genuinely separate containers/users/mount permissions in play --
+which is arguably a decent illustration of why the interview cares about
+actual deployment experience over just working code.
 
 ## Known limitations / what I'd address next
 
