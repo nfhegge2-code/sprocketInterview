@@ -125,11 +125,27 @@ this bit us:
   dropping WAL entirely and using SQLite's default rollback journal, which
   has no such requirement.
 
-Both are the kind of interaction that's easy to miss when building and
+**3. "Attacks in the last hour" showing nearly the same number as total
+attacks, days into running it.**
+Timestamps are stored as Python's `datetime.now(timezone.utc).isoformat()`,
+e.g. `2026-08-19T21:55:00.123456+00:00`. The stats query compared that
+directly against SQLite's own `datetime('now', '-1 hour')`, which outputs a
+*different* string format (`2026-08-19 21:00:00` -- space separator, no
+`T`, no offset). Comparing them as raw text rather than as actual datetime
+values meant that, since `T` sorts after a space character, almost every
+timestamp from the *current calendar day* -- regardless of actual hour --
+looked "greater than" the cutoff and got miscounted as within the last
+hour. Only entries from a previous calendar day were excluded correctly.
+Fixed by wrapping both sides in SQLite's `datetime()` function so it
+parses and normalizes both values before comparing them, instead of doing
+a plain string comparison between two mismatched formats.
+
+All three are the kind of interaction that's easy to miss when building and
 testing everything on one machine as one user, and only surfaces once
-you've got genuinely separate containers/users/mount permissions in play --
-which is arguably a decent illustration of why the interview cares about
-actual deployment experience over just working code.
+you've got genuinely separate containers/users/mount permissions in play,
+or once real data has accumulated over multiple days -- which is arguably
+a decent illustration of why the interview cares about actual deployment
+experience over just working code.
 
 ## Known limitations / what I'd address next
 

@@ -27,6 +27,11 @@ app.add_middleware(
 
 
 def query_db(sql: str, params: tuple = ()) -> list[dict]:
+    # Explicit read-only URI connection: the /data volume is mounted :ro in
+    # docker-compose.yml (the API should never be able to write to the
+    # honeypot's log). sqlite3.connect() requests read-write access by
+    # default even for SELECTs, which fails outright on a read-only mount --
+    # mode=ro tells SQLite not to attempt that.
     with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(sql, params).fetchall()
@@ -96,7 +101,7 @@ def get_stats() -> dict:
     )
 
     last_hour = query_db(
-        "SELECT COUNT(*) AS n FROM attacks WHERE ts >= datetime('now', '-1 hour')"
+        "SELECT COUNT(*) AS n FROM attacks WHERE datetime(ts) >= datetime('now', '-1 hour')"
     )[0]["n"]
 
     return {
