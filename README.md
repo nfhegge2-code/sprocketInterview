@@ -65,7 +65,7 @@ deliberately excluded from GeoIP lookups).
 4. Clone the repo onto the VPS and set the honeypot's port mapping in
    `docker-compose.yml` to `"22:2222"`.
 5. `docker compose up -d --build`
-6. The map is reachable at `http://<vps-ip>:8000`. Unsolicited scanning
+6. The map is reachable at `http://<vps-ip>:8000`. (or at `http://64-227-8-159.nip.io:8000` if there are any connection problems, especially on mobile) Unsolicited scanning
    traffic typically starts arriving within minutes to hours of the port
    being exposed.
 
